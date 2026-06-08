@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="description" content="Daily World Capitals Quiz">
+<link rel="manifest" href="manifest.json">
+<title>CAPITAL — Daily Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060b18;
+    --surface: #0d1628;
+    --surface2: #141f35;
+    --accent: #c8a96e;
+    --accent2: #4fc3f7;
+    --danger: #e05c5c;
+    --success: #5cb85c;
+    --text: #e8dcc8;
+    --muted: #6b7a99;
+    --border: rgba(200,169,110,0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Globe decoration */
+  .globe-bg {
+    position: fixed;
+    top: -200px; right: -200px;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 40%, rgba(79,195,247,0.04), transparent 60%),
+                radial-gradient(circle at 70% 70%, rgba(200,169,110,0.03), transparent 50%);
+    border: 1px solid rgba(200,169,110,0.05);
+    pointer-events: none; z-index: 0;
+  }
+  .globe-bg::after {
+    content: '';
+    position: absolute; inset: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(79,195,247,0.04);
+  }
+
+  #app { position: relative; z-index: 1; min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 6px;
+    color: var(--accent);
+  }
+  .logo span { color: var(--accent2); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .tab-btn {
+    background: none; border: none; cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { color: var(--accent); background: rgba(200,169,110,0.08); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  /* VIEWS */
+  .view { display: none; padding: 32px 28px; max-width: 700px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* HOME */
+  .hero {
+    margin-top: 24px;
+    margin-bottom: 40px;
+  }
+  .hero-label {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 10vw, 88px);
+    line-height: 0.9;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .hero h1 em {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent);
+    font-style: italic;
+  }
+  .hero-sub {
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .streak-row {
+    display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    flex: 1; min-width: 120px;
+  }
+  .stat-card .val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-card .lbl {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .daily-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .daily-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .daily-card .card-label {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 12px;
+  }
+  .daily-card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .daily-card p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent);
+    color: #060b18;
+    border: none; cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; font-weight: 400;
+    letter-spacing: 3px; text-transform: uppercase;
+    padding: 14px 28px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    margin-top: 20px;
+  }
+  .btn-primary:hover { background: #d4b87a; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .done-banner {
+    background: rgba(92,184,92,0.08);
+    border: 1px solid rgba(92,184,92,0.25);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--success);
+    margin-top: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* QUIZ */
+  .quiz-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .q-counter {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .score-live {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-bottom: 36px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .q-flag { font-size: 56px; margin-bottom: 16px; }
+  .q-label {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .q-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 5vw, 42px);
+    line-height: 1.1;
+    letter-spacing: 1px;
+    color: var(--text);
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .opt-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    text-align: left;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 12px;
+    line-height: 1.4;
+  }
+  .opt-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(200,169,110,0.06);
+    transform: translateY(-1px);
+  }
+  .opt-btn.correct {
+    background: rgba(92,184,92,0.12);
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .opt-btn.wrong {
+    background: rgba(224,92,92,0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .opt-btn:disabled { cursor: default; }
+  .opt-key {
+    font-size: 10px; letter-spacing: 1px;
+    color: var(--muted);
+    min-width: 18px;
+  }
+
+  .feedback-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .feedback-row.correct { background: rgba(92,184,92,0.08); color: var(--success); }
+  .feedback-row.wrong { background: rgba(224,92,92,0.08); color: var(--danger); }
+  .feedback-row .fi { font-size: 20px; }
+
+  .next-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    padding: 12px 24px;
+    border-radius: 6px;
+    margin-top: 16px;
+    transition: all 0.2s;
+  }
+  .next-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* RESULTS */
+  .result-hero { text-align: center; padding: 32px 0 40px; }
+  .result-score-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 100px; line-height: 1;
+    color: var(--accent); letter-spacing: 4px;
+  }
+  .result-label {
+    font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--muted); margin-top: 8px;
+  }
+  .result-msg {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--text);
+    margin-top: 16px;
+  }
+
+  .result-breakdown {
+    margin-top: 32px;
+  }
+  .breakdown-title {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px;
+  }
+  .breakdown-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .breakdown-item .country { color: var(--muted); font-size: 11px; }
+  .breakdown-item .answer { color: var(--text); }
+  .breakdown-item .result { font-size: 16px; }
+
+  /* HISTORY */
+  .history-empty {
+    text-align: center; padding: 80px 0;
+    color: var(--muted); font-size: 13px;
+    line-height: 2;
+  }
+  .history-empty .big { font-family: 'Bebas Neue', sans-serif; font-size: 64px; color: var(--surface2); letter-spacing: 4px; }
+  .history-list { margin-top: 8px; }
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 20px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .history-item:hover { border-color: rgba(200,169,110,0.3); }
+  .h-date {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 2px;
+    color: var(--accent);
+    min-width: 80px;
+  }
+  .h-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; color: var(--text);
+    letter-spacing: 1px;
+  }
+  .h-meta { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+  .h-bar { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .h-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; }
+
+  /* History detail modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(6,11,24,0.9);
+    z-index: 100;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 500px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--accent); }
+  .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; padding: 4px; }
+  .modal-close:hover { color: var(--text); }
+
+  @media (max-width: 480px) {
+    nav { padding: 16px 18px; }
+    .view { padding: 24px 18px; }
+    .options-grid { grid-template-columns: 1fr; }
+    .q-text { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="globe-bg"></div>
+<div id="app">
+  <nav>
+    <div class="logo">CAP<span>I</span>TAL</div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="showView('home')">Today</button>
+      <button class="tab-btn" onclick="showView('history')">History</button>
+    </div>
+  </nav>
+
+  <!-- HOME VIEW -->
+  <div class="view active" id="view-home">
+    <div class="hero">
+      <div class="hero-label">Daily Quiz</div>
+      <h1>Know Your<br><em>World</em></h1>
+      <div class="hero-sub">10 questions · World capitals · Every day a new challenge</div>
+    </div>
+
+    <div class="streak-row">
+      <div class="stat-card">
+        <div class="val" id="stat-streak">0</div>
+        <div class="lbl">Day Streak</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-total">0</div>
+        <div class="lbl">Quizzes Done</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-best">—</div>
+        <div class="lbl">Best Score</div>
+      </div>
+    </div>
+
+    <div class="daily-card">
+      <div class="card-label">▸ Today's Challenge</div>
+      <h2 id="today-date">—</h2>
+      <p id="today-status">Test your knowledge of world capitals with 10 questions. A new set every day.</p>
+      <button class="btn-primary" id="start-btn" onclick="startQuiz()">▶ Start Quiz</button>
+      <div class="done-banner" id="done-banner" style="display:none">
+        ✓ Completed today · <span id="done-score"></span> — Come back tomorrow!
+      </div>
+    </div>
+  </div>
+
+  <!-- QUIZ VIEW -->
+  <div class="view" id="view-quiz">
+    <div class="quiz-header">
+      <div class="q-counter" id="q-counter">Question 1 / 10</div>
+      <div class="score-live" id="score-live">0 / 0</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+    <div class="q-card" id="q-card">
+      <div class="q-flag" id="q-flag">🌍</div>
+      <div class="q-label">What is the capital of</div>
+      <div class="q-text" id="q-text">—</div>
+    </div>
+
+    <div class="options-grid" id="options-grid"></div>
+    <div id="feedback-row"></div>
+    <button class="next-btn" id="next-btn" style="display:none" onclick="nextQuestion()">
+      Next ›
+    </button>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div class="view" id="view-history">
+    <div class="hero-label" style="letter-spacing:4px;font-size:10px;text-transform:uppercase;color:var(--accent2);margin-bottom:20px">
+      Quiz History
+    </div>
+    <div id="history-container"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-date">—</div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:4px" id="modal-score">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────
+const ALL_CAPITALS = [
+  {country:"France",capital:"Paris",flag:"🇫🇷"},{country:"Germany",capital:"Berlin",flag:"🇩🇪"},
+  {country:"Italy",capital:"Rome",flag:"🇮🇹"},{country:"Spain",capital:"Madrid",flag:"🇪🇸"},
+  {country:"Japan",capital:"Tokyo",flag:"🇯🇵"},{country:"China",capital:"Beijing",flag:"🇨🇳"},
+  {country:"Brazil",capital:"Brasília",flag:"🇧🇷"},{country:"Australia",capital:"Canberra",flag:"🇦🇺"},
+  {country:"Canada",capital:"Ottawa",flag:"🇨🇦"},{country:"India",capital:"New Delhi",flag:"🇮🇳"},
+  {country:"South Korea",capital:"Seoul",flag:"🇰🇷"},{country:"Mexico",capital:"Mexico City",flag:"🇲🇽"},
+  {country:"Argentina",capital:"Buenos Aires",flag:"🇦🇷"},{country:"Egypt",capital:"Cairo",flag:"🇪🇬"},
+  {country:"South Africa",capital:"Pretoria",flag:"🇿🇦"},{country:"Nigeria",capital:"Abuja",flag:"🇳🇬"},
+  {country:"Russia",capital:"Moscow",flag:"🇷🇺"},{country:"Turkey",capital:"Ankara",flag:"🇹🇷"},
+  {country:"Saudi Arabia",capital:"Riyadh",flag:"🇸🇦"},{country:"Indonesia",capital:"Jakarta",flag:"🇮🇩"},
+  {country:"Pakistan",capital:"Islamabad",flag:"🇵🇰"},{country:"Bangladesh",capital:"Dhaka",flag:"🇧🇩"},
+  {country:"Thailand",capital:"Bangkok",flag:"🇹🇭"},{country:"Vietnam",capital:"Hanoi",flag:"🇻🇳"},
+  {country:"Philippines",capital:"Manila",flag:"🇵🇭"},{country:"Malaysia",capital:"Kuala Lumpur",flag:"🇲🇾"},
+  {country:"Netherlands",capital:"Amsterdam",flag:"🇳🇱"},{country:"Belgium",capital:"Brussels",flag:"🇧🇪"},
+  {country:"Switzerland",capital:"Bern",flag:"🇨🇭"},{country:"Sweden",capital:"Stockholm",flag:"🇸🇪"},
+  {country:"Norway",capital:"Oslo",flag:"🇳🇴"},{country:"Denmark",capital:"Copenhagen",flag:"🇩🇰"},
+  {country:"Finland",capital:"Helsinki",flag:"🇫🇮"},{country:"Poland",capital:"Warsaw",flag:"🇵🇱"},
+  {country:"Portugal",capital:"Lisbon",flag:"🇵🇹"},{country:"Greece",capital:"Athens",flag:"🇬🇷"},
+  {country:"Czech Republic",capital:"Prague",flag:"🇨🇿"},{country:"Austria",capital:"Vienna",flag:"🇦🇹"},
+  {country:"Hungary",capital:"Budapest",flag:"🇭🇺"},{country:"Romania",capital:"Bucharest",flag:"🇷🇴"},
+  {country:"Ukraine",capital:"Kyiv",flag:"🇺🇦"},{country:"Morocco",capital:"Rabat",flag:"🇲🇦"},
+  {country:"Kenya",capital:"Nairobi",flag:"🇰🇪"},{country:"Ethiopia",capital:"Addis Ababa",flag:"🇪🇹"},
+  {country:"Tanzania",capital:"Dodoma",flag:"🇹🇿"},{country:"Ghana",capital:"Accra",flag:"🇬🇭"},
+  {country:"Senegal",capital:"Dakar",flag:"🇸🇳"},{country:"Colombia",capital:"Bogotá",flag:"🇨🇴"},
+  {country:"Chile",capital:"Santiago",flag:"🇨🇱"},{country:"Peru",capital:"Lima",flag:"🇵🇪"},
+  {country:"Venezuela",capital:"Caracas",flag:"🇻🇪"},{country:"Cuba",capital:"Havana",flag:"🇨🇺"},
+  {country:"New Zealand",capital:"Wellington",flag:"🇳🇿"},{country:"Iraq",capital:"Baghdad",flag:"🇮🇶"},
+  {country:"Iran",capital:"Tehran",flag:"🇮🇷"},{country:"Israel",capital:"Jerusalem",flag:"🇮🇱"},
+  {country:"Jordan",capital:"Amman",flag:"🇯🇴"},{country:"Afghanistan",capital:"Kabul",flag:"🇦🇫"},
+  {country:"Nepal",capital:"Kathmandu",flag:"🇳🇵"},{country:"Sri Lanka",capital:"Colombo",flag:"🇱🇰"},
+  {country:"Myanmar",capital:"Naypyidaw",flag:"🇲🇲"},{country:"Cambodia",capital:"Phnom Penh",flag:"🇰🇭"},
+  {country:"Laos",capital:"Vientiane",flag:"🇱🇦"},{country:"Mongolia",capital:"Ulaanbaatar",flag:"🇲🇳"},
+  {country:"Kazakhstan",capital:"Astana",flag:"🇰🇿"},{country:"Uzbekistan",capital:"Tashkent",flag:"🇺🇿"},
+  {country:"Azerbaijan",capital:"Baku",flag:"🇦🇿"},{country:"Georgia",capital:"Tbilisi",flag:"🇬🇪"},
+  {country:"Ethiopia",capital:"Addis Ababa",flag:"🇪🇹"},{country:"Algeria",capital:"Algiers",flag:"🇩🇿"},
+  {country:"Libya",capital:"Tripoli",flag:"🇱🇾"},{country:"Tunisia",capital:"Tunis",flag:"🇹🇳"},
+  {country:"Sudan",capital:"Khartoum",flag:"🇸🇩"},{country:"Mozambique",capital:"Maputo",flag:"🇲🇿"},
+  {country:"Zimbabwe",capital:"Harare",flag:"🇿🇼"},{country:"Zambia",capital:"Lusaka",flag:"🇿🇲"},
+  {country:"Bolivia",capital:"Sucre",flag:"🇧🇴"},{country:"Ecuador",capital:"Quito",flag:"🇪🇨"},
+  {country:"Paraguay",capital:"Asunción",flag:"🇵🇾"},{country:"Uruguay",capital:"Montevideo",flag:"🇺🇾"},
+  {country:"Croatia",capital:"Zagreb",flag:"🇭🇷"},{country:"Serbia",capital:"Belgrade",flag:"🇷🇸"},
+  {country:"Slovakia",capital:"Bratislava",flag:"🇸🇰"},{country:"Slovenia",capital:"Ljubljana",flag:"🇸🇮"},
+  {country:"Bulgaria",capital:"Sofia",flag:"🇧🇬"},{country:"Ireland",capital:"Dublin",flag:"🇮🇪"},
+];
+
+// ─── STATE ────────────────────────────────────────────────────
+let quizState = null;
+
+// ─── STORAGE ──────────────────────────────────────────────────
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('capitalHistory') || '[]'); }
+  catch(e) { return []; }
+}
+function saveHistory(h) { localStorage.setItem('capitalHistory', JSON.stringify(h)); }
+function todayKey() { return new Date().toISOString().slice(0,10); }
+
+// ─── SEEDED RNG (deterministic daily questions) ────────────────
+function seededRand(seed) {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0x100000000;
+  };
+}
+function dateToSeed(dateStr) {
+  return dateStr.split('-').reduce((a,b) => a*100+parseInt(b), 0);
+}
+
+function getDailyQuestions(dateStr) {
+  const rand = seededRand(dateToSeed(dateStr));
+  const pool = [...ALL_CAPITALS];
+  // Fisher-Yates shuffle
+  for(let i = pool.length-1; i > 0; i--) {
+    const j = Math.floor(rand() * (i+1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, 10).map(q => {
+    const wrong = pool.filter(p => p.capital !== q.capital);
+    const shuffled = [...wrong].sort(() => rand()-0.5).slice(0,3);
+    const opts = [...shuffled, q].sort(() => rand()-0.5);
+    return { ...q, options: opts.map(o => o.capital) };
+  });
+}
+
+// ─── VIEWS ────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn')[name==='home'?0:1].classList.add('active');
+  if(name==='history') renderHistory();
+  if(name==='home') updateHomeStats();
+}
+
+// ─── HOME ─────────────────────────────────────────────────────
+function updateHomeStats() {
+  const history = getHistory();
+  const today = todayKey();
+
+  // Date display
+  document.getElementById('today-date').textContent =
+    new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  // Streak
+  let streak = 0;
+  const d = new Date();
+  while(true) {
+    const k = d.toISOString().slice(0,10);
+    if(history.find(h=>h.date===k)) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  document.getElementById('stat-streak').textContent = streak;
+  document.getElementById('stat-total').textContent = history.length;
+  const best = history.length ? Math.max(...history.map(h=>h.score)) : null;
+  document.getElementById('stat-best').textContent = best !== null ? best+'/10' : '—';
+
+  // Today done?
+  const todayEntry = history.find(h=>h.date===today);
+  if(todayEntry) {
+    document.getElementById('start-btn').style.display = 'none';
+    document.getElementById('done-banner').style.display = 'flex';
+    document.getElementById('done-score').textContent = todayEntry.score+'/10';
+  } else {
+    document.getElementById('start-btn').style.display = 'inline-flex';
+    document.getElementById('done-banner').style.display = 'none';
+  }
+}
+
+// ─── QUIZ ─────────────────────────────────────────────────────
+function startQuiz() {
+  const today = todayKey();
+  quizState = {
+    questions: getDailyQuestions(today),
+    current: 0,
+    score: 0,
+    answers: [],
+    date: today
+  };
+  showView('quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const s = quizState;
+  const q = s.questions[s.current];
+  const total = s.questions.length;
+
+  document.getElementById('q-counter').textContent = `Question ${s.current+1} / ${total}`;
+  document.getElementById('score-live').textContent = `${s.score} / ${s.current}`;
+  document.getElementById('progress-fill').style.width = `${(s.current/total)*100}%`;
+  document.getElementById('q-flag').textContent = q.flag;
+  document.getElementById('q-text').textContent = q.country;
+  document.getElementById('feedback-row').innerHTML = '';
+  document.getElementById('next-btn').style.display = 'none';
+
+  // Options
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  const keys = ['A','B','C','D'];
+  q.options.forEach((opt,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-key">${keys[i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, opt, q.capital);
+    grid.appendChild(btn);
+  });
+}
+
+function selectAnswer(idx, selected, correct) {
+  const btns = document.querySelectorAll('.opt-btn');
+  btns.forEach(b => b.disabled = true);
+
+  const isCorrect = selected === correct;
+  btns[idx].classList.add(isCorrect ? 'correct' : 'wrong');
+  if(!isCorrect) {
+    // Highlight correct
+    btns.forEach(b => {
+      if(b.textContent.includes(correct)) b.classList.add('correct');
+    });
+  }
+
+  if(isCorrect) quizState.score++;
+  quizState.answers.push({ country: quizState.questions[quizState.current].country, selected, correct, isCorrect });
+
+  const fb = document.getElementById('feedback-row');
+  fb.innerHTML = `<div class="feedback-row ${isCorrect?'correct':'wrong'}">
+    <span class="fi">${isCorrect?'✓':'✗'}</span>
+    ${isCorrect ? 'Correct!' : `The capital is <strong>${correct}</strong>`}
+  </div>`;
+
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.style.display = 'inline-flex';
+  nextBtn.textContent = quizState.current < quizState.questions.length-1 ? 'Next ›' : 'See Results ›';
+}
+
+function nextQuestion() {
+  quizState.current++;
+  if(quizState.current >= quizState.questions.length) {
+    finishQuiz();
+  } else {
+    renderQuestion();
+    document.getElementById('q-card').style.animation = 'none';
+    requestAnimationFrame(() => { document.getElementById('q-card').style.animation = ''; });
+  }
+}
+
+function finishQuiz() {
+  // Save to history
+  const history = getHistory();
+  const existing = history.findIndex(h => h.date === quizState.date);
+  const entry = {
+    date: quizState.date,
+    score: quizState.score,
+    total: quizState.questions.length,
+    answers: quizState.answers
+  };
+  if(existing >= 0) history[existing] = entry;
+  else history.unshift(entry);
+  saveHistory(history);
+
+  // Show results in quiz view
+  const s = quizState;
+  const pct = s.score / s.questions.length;
+  const msgs = ['Keep practicing!', 'Not bad!', 'Pretty good!', 'Well done!', 'Excellent!', 'Perfect score!'];
+  const msgIdx = Math.floor(pct * (msgs.length-1) + 0.5);
+
+  document.getElementById('view-quiz').innerHTML = `
+    <div class="result-hero">
+      <div style="font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--muted);margin-bottom:16px">Quiz Complete</div>
+      <div class="result-score-big">${s.score}<span style="font-size:48px;color:var(--muted)">/${s.questions.length}</span></div>
+      <div class="result-label">Correct answers</div>
+      <div class="result-msg">${msgs[msgIdx]}</div>
+    </div>
+    <div class="result-breakdown">
+      <div class="breakdown-title">Breakdown</div>
+      ${s.answers.map(a => `
+        <div class="breakdown-item">
+          <div>
+            <div class="country">${a.country}</div>
+            <div class="answer">${a.selected}</div>
+          </div>
+          <div class="result">${a.isCorrect ? '✓' : '✗'}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="margin-top:32px;display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="goHome()">← Back Home</button>
+    </div>
+  `;
+}
+
+function goHome() {
+  showView('home');
+  updateHomeStats();
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────
+function renderHistory() {
+  const history = getHistory();
+  const container = document.getElementById('history-container');
+  if(!history.length) {
+    container.innerHTML = `<div class="history-empty">
+      <div class="big">NONE</div>
+      No quizzes completed yet.<br>Start today's quiz to build your history.
+    </div>`;
+    return;
+  }
+  container.innerHTML = `<div class="history-list">
+    ${history.map((h,i) => {
+      const d = new Date(h.date+'T12:00:00');
+      const dateStr = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const pct = (h.score/h.total)*100;
+      return `<div class="history-item" onclick="openModal(${i})">
+        <div class="h-date">${dateStr}</div>
+        <div style="flex:1">
+          <div class="h-score">${h.score}<span style="font-size:16px;color:var(--muted)">/${h.total}</span></div>
+          <div class="h-meta">${h.answers.filter(a=>a.isCorrect).length} correct</div>
+        </div>
+        <div class="h-bar" style="max-width:80px">
+          <div class="h-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function openModal(idx) {
+  const history = getHistory();
+  const h = history[idx];
+  const d = new Date(h.date+'T12:00:00');
+  document.getElementById('modal-date').textContent =
+    d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('modal-score').textContent = `${h.score} / ${h.total} correct`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="result-breakdown">
+      ${h.answers.map(a => `
+        <div class="breakdown-item">
+          <div>
+            <div class="country">${a.country}</div>
+            <div class="answer" style="color:${a.isCorrect?'var(--success)':'var(--danger)'}">${a.selected}</div>
+            ${!a.isCorrect ? `<div class="country" style="color:var(--muted)">✓ ${a.correct}</div>` : ''}
+          </div>
+          <div class="result">${a.isCorrect?'✓':'✗'}</div>
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+// ─── INIT ─────────────────────────────────────────────────────
+updateHomeStats();
+</script>
+
+<!-- PWA Service Worker registration -->
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
